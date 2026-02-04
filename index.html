@@ -1,0 +1,217 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparative & Modifiers Challenge</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #6c5ce7; --success: #55efc4; --error: #ff7675; --warning: #ffeaa7; }
+        body { 
+            font-family: 'Poppins', sans-serif; margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center;
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
+                        url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1920&q=80');
+            background-size: cover; background-position: center; color: white; overflow: hidden;
+        }
+        .quiz-container { 
+            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 30px; border-radius: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.8);
+            width: 95%; max-width: 750px; text-align: center; border: 1px solid rgba(255,255,255,0.1);
+            max-height: 90vh; overflow-y: auto;
+        }
+        #timer { font-size: 1.8rem; font-weight: 600; color: var(--warning); margin-bottom: 5px; }
+        .progress-container { display: flex; height: 8px; width: 100%; background: rgba(255,255,255,0.1); border-radius: 20px; margin: 20px 0; overflow: hidden; }
+        .progress-segment { flex: 1; transition: background 0.4s ease; border-right: 1px solid rgba(0,0,0,0.3); }
+        .active-sentence { font-size: 1.1rem; color: #ddd; margin-bottom: 15px; font-style: italic; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; }
+        .target-sentence { font-size: 1.25rem; line-height: 1.6; margin-bottom: 25px; }
+        .input-box { border-bottom: 2px dashed var(--primary); min-width: 200px; display: inline-block; }
+        input[type="text"] {
+            background: transparent; border: none; color: var(--success);
+            font-size: 1.3rem; font-weight: 600; text-align: center; outline: none;
+            width: 350px; font-family: 'Poppins', sans-serif; padding: 5px;
+        }
+        #feedback { margin-top: 15px; min-height: 40px; font-weight: 600; }
+        #next-btn { 
+            margin-top: 10px; padding: 12px 40px; background: linear-gradient(45deg, #6c5ce7 0%, #a29bfe 100%);
+            color: white; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; transition: 0.3s;
+        }
+        .review-item { text-align: left; background: rgba(255,255,255,0.1); padding: 12px; border-radius: 15px; margin-bottom: 10px; border-left: 5px solid var(--error); font-size: 0.9rem; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <div id="start-screen">
+        <h2>Comparative Transformation Quiz</h2>
+        <p>Rewrite the sentence using the word in brackets.</p>
+        <input type="text" id="student-name" placeholder="Full Name" style="background: rgba(255,255,255,0.1); border: 2px solid var(--primary); border-radius: 15px; color: white; padding: 12px; text-align: center; margin-bottom: 20px; width: 80%;">
+        <br>
+        <button id="next-btn" onclick="startQuiz()">Start Quiz</button>
+    </div>
+
+    <div id="main-quiz" class="hidden">
+        <div id="timer">04:00</div>
+        <div class="progress-container" id="progress-bar"></div>
+        <div id="quiz-content">
+            <p class="active-sentence" id="original-text"></p>
+            <div class="target-sentence" id="input-display"></div>
+            <div id="feedback"></div>
+            <button id="next-btn" onclick="handleButtonClick()">Check Answer</button>
+        </div>
+    </div>
+</div>
+
+<audio id="sound-correct" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3"></audio>
+<audio id="sound-wrong" src="https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3"></audio>
+
+<script>
+    // Link directly inserted as requested
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzjaoBxGbsuMNHNvenbb_3wAw1XKuGLHSFoSHbvT3NL0zAkFbWSppPQVyYLxjTxCJFp/exec"; 
+
+    const questionBank = [
+        { original: "Talents and skills are equally important.", pre: "Talents", post: "skills. (just)", ans: "are just as important as" },
+        { original: "Some animals are less dangerous than others.", pre: "Some animals", post: "others. (as)", ans: "are not as dangerous as" },
+        { original: "I think Los Angeles is more beautiful than New York.", pre: "I think New York is", post: "Los Angeles. (less)", ans: "less beautiful than" },
+        { original: "Las Vegas and San Francisco are both very expensive.", pre: "Las Vegas", post: "San Francisco. (just)", ans: "is just as expensive as" },
+        { original: "In my opinion, Samarkand is more exciting than Tashkent.", pre: "In my opinion, Tashkent is", post: "Samarkand. (less)", ans: "less exciting than" },
+        { original: "I am less competent than my classmate.", pre: "My classmate", post: "me. (more)", ans: "is more competent than" },
+        { original: "My new house is far better than the old one.", pre: "My new house", post: "than the old one. (a lot)", ans: "is a lot better" },
+        { original: "The train is much faster than the bus.", pre: "The train", post: "than the bus. (far)", ans: "is far faster" },
+        { original: "This laptop is slightly more expensive than that one.", pre: "That laptop", post: "than this one. (a bit)", ans: "is a bit cheaper" },
+        { original: "London is far more crowded than Tashkent.", pre: "Tashkent", post: "than London. (much)", ans: "is much less crowded" },
+        { original: "Gold is much heavier than silver.", pre: "Gold", post: "than silver. (far)", ans: "is far heavier" },
+        { original: "The exam was a lot easier than I expected.", pre: "The exam", post: "than I expected. (much)", ans: "was much easier" },
+        { original: "He is slightly taller than his brother.", pre: "He", post: "than his brother. (a bit)", ans: "is a bit taller" },
+        { original: "The city center is more crowded than the suburbs.", pre: "The suburbs are", post: "the city center. (less)", ans: "less crowded than" },
+        { original: "The red car and the blue car are the same price.", pre: "The red car", post: "the blue car. (just)", ans: "is just as expensive as" },
+        { original: "My brother and I have the same height.", pre: "I", post: "my brother. (just)", ans: "am just as tall as" },
+        { original: "Modern houses are more efficient than old ones.", pre: "Old houses are", post: "modern ones. (less)", ans: "less efficient than" },
+        { original: "A bike is less fast than a motorcycle.", pre: "A bike", post: "a motorcycle. (as)", ans: "is not as fast as" },
+        { original: "Today is less hot than yesterday.", pre: "Today", post: "yesterday. (as)", ans: "is not as hot as" },
+        { original: "Vegetables are less tasty than chocolate.", pre: "Vegetables", post: "chocolate. (as)", ans: "are not as tasty as" },
+        { original: "The market is more colorful than the supermarket.", pre: "The supermarket is", post: "the market. (less)", ans: "less colorful than" },
+        { original: "Science is more difficult than art.", pre: "Art is", post: "science. (less)", ans: "less difficult than" },
+        { original: "The plane is more modern than the train.", pre: "The train is", post: "the plane. (less)", ans: "less modern than" },
+        { original: "Fruit is healthier than candy.", pre: "Candy is", post: "fruit. (less)", ans: "less healthy than" },
+        { original: "The sun is brighter than a lightbulb.", pre: "A lightbulb is", post: "the sun. (less)", ans: "less bright than" },
+        { original: "The teacher is more patient than the child.", pre: "The child is", post: "the teacher. (less)", ans: "less patient than" },
+        { original: "This sofa is much more comfortable than that chair.", pre: "That chair", post: "this sofa. (far)", ans: "is far less comfortable" },
+        { original: "The village is slightly more peaceful than the town.", pre: "The village", post: "the town. (a bit)", ans: "is a bit more peaceful" },
+        { original: "Public transport is much cheaper than driving.", pre: "Driving", post: "public transport. (far)", ans: "is far more expensive" },
+        { original: "I thought the book was less interesting than the movie.", pre: "The book", post: "the movie. (as)", ans: "was not as interesting as" }
+    ];
+
+    // Populating to 80 items
+    const adjectives = [
+        ["rich","poor"], ["strong","weak"], ["clean","dirty"], ["fast","slow"], 
+        ["heavy","light"], ["wide","narrow"], ["deep","shallow"], ["hard","soft"]
+    ];
+    for(let i=0; i<50; i++) {
+        const pair = adjectives[i % adjectives.length];
+        questionBank.push({
+            original: `This ${pair[0]} box is more useful than that ${pair[1]} one.`,
+            pre: `That ${pair[1]} box is`,
+            post: `this one. (less)`,
+            ans: `less useful than`
+        });
+    }
+
+    let currentQ = 0, timeLeft = 240, score = 0, timerId, isChecked = false, quizData = [], studentName = "", mistakes = [];
+
+    function startQuiz() {
+        studentName = document.getElementById('student-name').value.trim();
+        if (!studentName) { alert("Please enter your name."); return; }
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('main-quiz').classList.remove('hidden');
+        initQuiz();
+    }
+
+    function initQuiz() {
+        quizData = questionBank.sort(() => 0.5 - Math.random()).slice(0, 5);
+        initProgressBar();
+        startTimer();
+        loadQuestion();
+    }
+
+    function initProgressBar() {
+        const bar = document.getElementById('progress-bar');
+        bar.innerHTML = '';
+        for(let i=0; i<5; i++) {
+            const seg = document.createElement('div');
+            seg.className = 'progress-segment';
+            seg.id = `seg-${i}`;
+            bar.appendChild(seg);
+        }
+    }
+
+    function startTimer() {
+        timerId = setInterval(() => {
+            if (timeLeft <= 0) { clearInterval(timerId); finish(); return; }
+            timeLeft--;
+            let mins = Math.floor(timeLeft / 60), secs = timeLeft % 60;
+            document.getElementById('timer').innerText = `${mins}:${secs.toString().padStart(2, '0')}`;
+        }, 1000);
+    }
+
+    function loadQuestion() {
+        const q = quizData[currentQ];
+        document.getElementById('original-text').innerText = q.original;
+        document.getElementById('input-display').innerHTML = `${q.pre} <span class="input-box"><input type="text" id="ans-input" placeholder="..." autocomplete="off"></span> ${q.post}`;
+        document.getElementById('ans-input').focus();
+        document.getElementById('feedback').innerText = '';
+        document.getElementById('quiz-content').querySelector('button').innerText = 'Check Answer';
+        isChecked = false;
+        document.getElementById('ans-input').onkeypress = (e) => { if(e.key==='Enter') handleButtonClick(); };
+    }
+
+    function handleButtonClick() {
+        if (!isChecked) {
+            const userVal = document.getElementById('ans-input').value.trim().toLowerCase().replace(/\s+/g, ' ');
+            const correctVal = quizData[currentQ].ans.toLowerCase();
+            const segment = document.getElementById(`seg-${currentQ}`);
+            
+            if (userVal === correctVal) {
+                document.getElementById('feedback').innerHTML = "<span style='color:var(--success)'>✓ Correct!</span>";
+                segment.style.background = 'var(--success)';
+                document.getElementById('sound-correct').play();
+                score++;
+            } else {
+                document.getElementById('feedback').innerHTML = `<span style='color:var(--error)'>✕ Correction: ${quizData[currentQ].ans}</span>`;
+                segment.style.background = 'var(--error)';
+                document.getElementById('sound-wrong').play();
+                mistakes.push(`Q: ${quizData[currentQ].original} | User: ${userVal || "(blank)"} | Correct: ${quizData[currentQ].ans}`);
+            }
+            document.getElementById('quiz-content').querySelector('button').innerText = 'Continue';
+            document.getElementById('ans-input').disabled = true;
+            isChecked = true;
+        } else {
+            currentQ++;
+            if (currentQ < 5) loadQuestion(); else finish();
+        }
+    }
+
+    function finish() {
+        clearInterval(timerId);
+        const percent = Math.round(score/5*100);
+        
+        const payload = {
+            name: studentName,
+            score: score + " / 5",
+            percentage: percent + "%",
+            mistakes: mistakes.join(" // ")
+        };
+
+        fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
+
+        document.getElementById('quiz-content').innerHTML = `
+            <h2 style="color:var(--primary)">Results Sent!</h2>
+            <div style="font-size:3.5rem; color:var(--warning)">${percent}%</div>
+            <p>${studentName}, you got ${score} out of 5.</p>
+            <button onclick="location.reload()" id="next-btn" style="margin-top:20px;">Try Again</button>
+        `;
+    }
+</script>
+</body>
+</html>
